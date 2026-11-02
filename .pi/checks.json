@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "checks": {
+    "typecheck": { "argv": ["node", "node_modules/typescript/bin/tsc", "--noEmit"], "timeoutMs": 60000, "description": "TypeScript for the extension, CLI and tests" },
+    "unit": { "argv": ["node", "--import", "tsx", "--test", "test/*.test.ts"], "timeoutMs": 300000, "description": "Redaction, store, runtime, vault_run injection, hooks, CLI, DPAPI and Credential Manager (Windows), Pi loader" }
+  }
+}
