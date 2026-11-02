@@ -135,6 +135,8 @@ function runScript(operation: Operation, stdin: string, target?: string): Promis
     child.stdout.on('data', (chunk: string) => { stdout += chunk; });
     child.on('error', () => { clearTimeout(timer); reject(new Error('Windows PowerShell could not be started')); });
     child.on('close', exitCode => { clearTimeout(timer); resolve({ exitCode, stdout }); });
+    // A script that exits early closes its stdin; that write error is reported by the exit code, not as a crash.
+    child.stdin.on('error', () => undefined);
     child.stdin.end(stdin, 'ascii');
   });
 }

@@ -68,6 +68,7 @@ export function runShell(options: ProcessOptions): Promise<ProcessResult> {
       resolve({ status, exitCode: code, stdout: stdout.bytes, stderr: stderr.bytes, truncated: stdout.truncated || stderr.truncated });
     });
 
+    child.stdin?.on('error', () => undefined);
     if (viaStdin) child.stdin?.end(options.command);
     else child.stdin?.end();
   });

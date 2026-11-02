@@ -65,7 +65,12 @@ async function add(args: readonly string[], io: { readonly out: (line: string) =
     await writeCredman(target, value);
     ref = { source: 'credman', target };
   }
-  await saveVault(dir, withSecret(loaded.file, name, ref));
+  try {
+    await saveVault(dir, withSecret(loaded.file, name, ref));
+  } catch (error) {
+    if (ref.source === 'credman') await deleteCredman(ref.target).catch(() => false);
+    throw error;
+  }
   io.out(`${name} stored (${source}). The value was not printed.`);
   return 0;
 }
