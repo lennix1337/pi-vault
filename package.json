@@ -25,6 +25,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
+    "mutations": "node test/mutations.mjs",
+    "verify": "npm run check && npm test",
     "vault": "node --import tsx src/cli.ts"
   },
   "dependencies": {
