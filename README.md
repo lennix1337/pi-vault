@@ -2,7 +2,7 @@
 
 Use credentials without the model seeing them. The vault keeps secret values where Windows protects them, and gives the model only their names. A command that needs a secret receives it in its environment for that one run; the output comes back with every occurrence of the value masked.
 
-Status: local package, not installed in Pi and not published. Built after a Stripe live key reached the model's context.
+Status: in daily use in the author's Pi (loaded from a local checkout); not published to npm. Built after a Stripe live key reached the model's context.
 
 ## What the model gets
 
@@ -78,8 +78,8 @@ A command that contains a value, or a token shape, is refused with the name of w
 
 ## Tests
 
-`npm run check` (TypeScript) and `npm test`. The Windows tests use real DPAPI and a temporary Credential Manager entry with a fake value, deleted afterwards; they are skipped elsewhere. Injection, redaction, refusal, timeout, abort and the CLI run against the real shell.
+`npm run verify` (TypeScript, then `npm test`); `npm run mutations` removes each of eight guards (base64 and stdout/stderr masking, placeholder grant, unknown name, carrier scrub, literal refusal, value-free listing) in a disposable copy and requires a test to fail. The Windows tests use real DPAPI and a temporary Credential Manager entry with a fake value, deleted afterwards; they are skipped elsewhere. Injection, redaction, refusal, timeout, abort and the CLI run against the real shell.
 
-## Install (not done)
+## Install
 
-Install into Pi only after review: `pi install <path-to-pi-vault>` (or add the path to `packages` in `~/.pi/agent/settings.json`), then restart Pi. Publishing is a separate decision.
+`pi install git:github.com/lennix1337/pi-vault`, or add a checkout's path to `packages` in `~/.pi/agent/settings.json`, then reload Pi. A fresh session discovers the packaged `pi-vault` skill. A `v*` tag runs `.github/workflows/release.yml` (npm publish with provenance); no version has been published yet.
