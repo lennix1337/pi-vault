@@ -1,6 +1,6 @@
 {
   "name": "@lennix1337/pi-vault",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use credentials without the model seeing them: named secrets injected into a child process only, with redaction of tool results and refusal of literal secrets in tool arguments.",
   "author": "lennix1337",
   "license": "MIT",
@@ -8,10 +8,18 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "pi",
+    "pi-coding-agent",
     "secrets",
+    "secrets-management",
     "credentials",
+    "api-keys",
+    "redaction",
+    "llm-security",
+    "ai-agent",
     "dpapi",
-    "credential-manager"
+    "credential-manager",
+    "windows"
   ],
   "pi": {
     "extensions": [
@@ -54,5 +62,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://github.com/lennix1337/pi-vault#readme",
+  "bugs": {
+    "url": "https://github.com/lennix1337/pi-vault/issues"
   }
 }
