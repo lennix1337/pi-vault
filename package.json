@@ -1,7 +1,6 @@
 {
   "name": "@lennix1337/pi-vault",
   "version": "0.1.0",
-  "private": true,
   "description": "Use credentials without the model seeing them: named secrets injected into a child process only, with redaction of tool results and refusal of literal secrets in tool arguments.",
   "author": "lennix1337",
   "license": "MIT",
