@@ -1,5 +1,11 @@
 # pi-vault
 
+[![npm](https://img.shields.io/npm/v/@lennix1337/pi-vault)](https://www.npmjs.com/package/@lennix1337/pi-vault)
+[![check](https://github.com/lennix1337/pi-vault/actions/workflows/check.yml/badge.svg)](https://github.com/lennix1337/pi-vault/actions/workflows/check.yml)
+[![license](https://img.shields.io/npm/l/@lennix1337/pi-vault)](LICENSE)
+
+Install: `pi install npm:@lennix1337/pi-vault`
+
 Use credentials without the model seeing them. The vault keeps secret values where Windows protects them, and gives the model only their names. A command that needs a secret receives it in its environment for that one run; the output comes back with every occurrence of the value masked.
 
 Status: in daily use in the author's Pi (loaded from a local checkout); published on npm as `@lennix1337/pi-vault`. Built after a Stripe live key reached the model's context.
