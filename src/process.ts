@@ -8,6 +8,13 @@ import { getShellConfig } from '@earendil-works/pi-coding-agent';
 /** Raw output kept per stream. Beyond this the capture stops and the tail is dropped. */
 export const CAPTURE_LIMIT_BYTES = 8 * 1024 * 1024;
 
+/**
+ * How long the output may stay open after the shell exits or is killed. A process the command left in the
+ * background (`nohup deploy &`) can inherit the pipes and hold them for as long as it runs; past this the
+ * call returns with what the shell wrote instead of waiting for it.
+ */
+const DRAIN_MS = 500;
+
 export interface ProcessOptions {
   readonly command: string;
   readonly cwd: string;
@@ -42,10 +49,33 @@ export function runShell(options: ProcessOptions): Promise<ProcessResult> {
     const out = new Capture();
     const err = new Capture();
     let stopReason: 'timeout' | 'aborted' | undefined;
+    let exitCode: number | null = null;
+    let settled = false;
+    let drain: ReturnType<typeof setTimeout> | undefined;
+    const settle = (status?: ProcessResult['status']) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(drain);
+      options.signal?.removeEventListener('abort', onAbort);
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      const stdout = out.finish();
+      const stderr = err.finish();
+      if (status === 'error') {
+        resolve({ status, exitCode: null, stdout: stdout.bytes, stderr: stderr.bytes, truncated: false });
+        return;
+      }
+      resolve({ status: stopReason ?? (exitCode === 0 ? 'ok' : 'failed'), exitCode, stdout: stdout.bytes, stderr: stderr.bytes, truncated: stdout.truncated || stderr.truncated });
+    };
+    const drainThenSettle = () => {
+      if (!drain) drain = setTimeout(settle, DRAIN_MS);
+    };
     const stop = (reason: 'timeout' | 'aborted') => {
       if (stopReason) return;
       stopReason = reason;
       killTree(child.pid, posix);
+      drainThenSettle();
     };
     const timer = setTimeout(() => stop('timeout'), options.timeoutMs);
     const onAbort = () => stop('aborted');
@@ -54,18 +84,14 @@ export function runShell(options: ProcessOptions): Promise<ProcessResult> {
 
     child.stdout?.on('data', (chunk: Buffer) => out.push(chunk));
     child.stderr?.on('data', (chunk: Buffer) => err.push(chunk));
-    child.on('error', () => {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', onAbort);
-      resolve({ status: 'error', exitCode: null, stdout: out.finish().bytes, stderr: err.finish().bytes, truncated: false });
+    child.on('error', () => settle('error'));
+    child.on('exit', (code: number | null) => {
+      exitCode = code;
+      drainThenSettle();
     });
     child.on('close', (code: number | null) => {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', onAbort);
-      const stdout = out.finish();
-      const stderr = err.finish();
-      const status = stopReason ?? (code === 0 ? 'ok' : 'failed');
-      resolve({ status, exitCode: code, stdout: stdout.bytes, stderr: stderr.bytes, truncated: stdout.truncated || stderr.truncated });
+      exitCode = code;
+      settle();
     });
 
     child.stdin?.on('error', () => undefined);

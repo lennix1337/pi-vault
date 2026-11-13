@@ -94,6 +94,26 @@ test('a command that exceeds its timeout is killed and reports timeout', async (
   assert.equal(report.status, 'timeout');
 });
 
+test('a command that leaves a background process holding its output returns when the shell exits', async () => {
+  // A detached deploy (`nohup ... &`) whose descendants inherit the output pipe kept vault_run waiting until the
+  // deploy ended, 13 minutes past a 60 s timeout, and the call came back as an uncertain timeout.
+  const state = await stateWith();
+  const started = Date.now();
+  const report = await runVault({ command: '(sleep 6 &); echo started', timeoutMs: 4000 }, { cwd, state });
+  assert.equal(report.status, 'ok');
+  assert.equal(report.exitCode, 0);
+  assert.equal(report.stdout.trim(), 'started');
+  assert.ok(Date.now() - started < 3000, `returned after ${Date.now() - started} ms`);
+});
+
+test('the timeout bounds the call even when a process outside the killed tree holds the output', async () => {
+  const state = await stateWith();
+  const started = Date.now();
+  const report = await runVault({ command: '(sleep 8 &); sleep 30', timeoutMs: 1000 }, { cwd, state });
+  assert.equal(report.status, 'timeout');
+  assert.ok(Date.now() - started < 5000, `returned after ${Date.now() - started} ms`);
+});
+
 test('the abort signal stops a running command', async () => {
   const state = await stateWith();
   const controller = new AbortController();
