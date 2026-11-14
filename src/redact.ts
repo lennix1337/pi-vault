@@ -1,8 +1,9 @@
 /**
  * Detection and masking of secrets in text. Pure functions: no I/O, no logging.
  *
- * A stored value is found in its raw form and in its base64 form, because a
- * command that encodes a credential would otherwise carry it past the check.
+ * A stored value is found in its raw form and in its base64 form, alone or
+ * inside a larger base64 payload, because a command that encodes a credential
+ * would otherwise carry it past the check.
  * Known token shapes are matched even when the value is not stored, so a live
  * key pasted by the model or printed by a file is still masked.
  */
@@ -30,10 +31,32 @@ function globalPattern(pattern: RegExp): RegExp {
   return new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`);
 }
 
-/** The forms of a stored value that must never reach the model: raw and base64. */
+/**
+ * Shortest base64 stretch masked as a value inside a larger payload: what a value of MIN_SECRET_LENGTH bytes
+ * leaves once its border characters are dropped. A shorter stretch would also match ordinary text.
+ */
+export const MIN_EMBEDDED_BASE64_LENGTH = 10;
+
+/** The forms of a stored value that must never reach the model: raw, base64, and base64 inside a larger payload. */
 export function valueVariants(value: string): string[] {
   const variants = [value, Buffer.from(value, 'utf8').toString('base64')];
-  return [...new Set(variants)].sort((a, b) => b.length - a.length);
+  return [...new Set([...variants, ...embeddedBase64(value)])].sort((a, b) => b.length - a.length);
+}
+
+/**
+ * What the value encodes to inside a larger base64 payload, such as `Authorization: Basic base64(user:value)`.
+ * Base64 packs 3 bytes into 4 characters, so the bytes before the value put it at one of three alignments. A
+ * character that also holds bits of a neighbouring byte changes with that neighbour, so it is left out: 0, 2 or 3
+ * at the start, and the last one unless the value ends on a 3-byte boundary.
+ */
+function embeddedBase64(value: string): string[] {
+  const bytes = Buffer.from(value, 'utf8');
+  return [0, 1, 2]
+    .map(lead => {
+      const encoded = Buffer.concat([Buffer.alloc(lead), bytes]).toString('base64').replace(/=+$/, '');
+      return encoded.slice(Math.ceil((lead * 8) / 6), (lead + bytes.length) % 3 === 0 ? undefined : -1);
+    })
+    .filter(stretch => stretch.length >= MIN_EMBEDDED_BASE64_LENGTH);
 }
 
 /** Labels of every stored secret name and token shape found in the text. Never returns the matched text. */
@@ -48,7 +71,7 @@ export function findLeaks(text: string, secrets: readonly KnownSecret[]): string
   return [...new Set(found)];
 }
 
-/** Masks every stored value (raw and base64) and every known token shape. Markers name the secret or shape, never its value. */
+/** Masks every stored value in each of its forms (see valueVariants) and every known token shape. Markers name the secret or shape, never its value. */
 export function redactText(text: string, secrets: readonly KnownSecret[]): string {
   let out = text;
   const variants = secrets.flatMap(secret => valueVariants(secret.value).map(variant => ({ name: secret.name, variant })));

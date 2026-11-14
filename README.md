@@ -19,8 +19,8 @@ Status: in daily use in the author's Pi (loaded from a local checkout); publishe
 
 Hooks, for every Pi session that loads the package:
 
-- `tool_call`: refuses any tool call whose arguments contain a stored value (raw or base64) or a token shape. Bash and PowerShell commands lose the environment variables that carry vault values, so the model's own commands cannot print them.
-- `tool_result`: masks stored values and token shapes in the text and details of every tool result, including `read` and bash output.
+- `tool_call`: refuses any tool call whose arguments contain a stored value (raw, base64, or base64 inside a larger payload such as a Basic authorization header) or a token shape. Bash and PowerShell commands lose the environment variables that carry vault values, so the model's own commands cannot print them.
+- `tool_result`: masks stored values, in the same forms, and token shapes in the text and details of every tool result, including `read` and bash output.
 
 Masked token shapes: `sk_live_`, `rk_live_`, `whsec_`, GitHub tokens (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`, `github_pat_`), Slack `xox*`, AWS `AKIA`/`ASIA` keys, Google `AIza` keys, JWTs, and PEM private key blocks.
 
@@ -76,7 +76,7 @@ A command that contains a value, or a token shape, is refused with the name of w
 ## Risks and limits
 
 - **The command decides where a secret goes.** The vault keeps a value out of the model's context, not out of the command. A command the model writes can send `$STRIPE_KEY` to any host. Gate `vault_run` with an approval (OptChat effect approvals) and keep it out of unattended runs.
-- **Masking is by value and by shape.** Encodings beyond raw and base64 (hex, URL encoding, a value split across lines, reversed text) are not masked. A new token format is not masked until its shape is added.
+- **Masking is by value and by shape.** A stored value is masked raw, as base64, and as base64 inside a larger payload (`Authorization: Basic base64(user:value)`, the `auth` field of a Docker config). Inside a larger payload up to 2 base64 characters at the edges of the value stay visible: each also encodes a neighbouring byte, and together they show at most 4 bits of the first byte and 4 of the last. Not masked: base64 broken across lines (the `base64` command wraps at 76 characters, which splits a payload longer than 57 bytes), URL encoding, hex, a value split across lines, reversed text. A new token format is not masked until its shape is added.
 - **Environment-sourced values** exist in the Pi process environment. The bash and PowerShell prefixes remove them from the model's commands, but a process started by Pi itself (an extension, a subagent) still inherits them.
 - **Same-user malware can decrypt DPAPI and read Credential Manager.** Both protect against other Windows accounts and offline copies of `vault.json`, not against code running as you.
 - **Plaintext is in memory** in the Pi process and in the child that was granted it.
@@ -84,7 +84,7 @@ A command that contains a value, or a token shape, is refused with the name of w
 
 ## Tests
 
-`npm run verify` (TypeScript, then `npm test`); `npm run mutations` removes each of eight guards (base64 and stdout/stderr masking, placeholder grant, unknown name, carrier scrub, literal refusal, value-free listing) in a disposable copy and requires a test to fail. The Windows tests use real DPAPI and a temporary Credential Manager entry with a fake value, deleted afterwards; they are skipped elsewhere. Injection, redaction, refusal, timeout, abort and the CLI run against the real shell.
+`npm run verify` (TypeScript, then `npm test`); `npm run mutations` removes each of ten guards (base64 masking alone and inside a larger payload, the minimum length of that inner stretch, stdout/stderr masking, placeholder grant, unknown name, carrier scrub, literal refusal, value-free listing) in a disposable copy and requires a test to fail. The Windows tests use real DPAPI and a temporary Credential Manager entry with a fake value, deleted afterwards; they are skipped elsewhere. Injection, redaction, refusal, timeout, abort and the CLI run against the real shell.
 
 ## Install
 

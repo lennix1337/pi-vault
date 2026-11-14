@@ -8,6 +8,8 @@ import assert from 'node:assert/strict';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cases = [
   ['encoded-mask', 'src/redact.ts', "[value, Buffer.from(value, 'utf8').toString('base64')]", '[value]', 'stored value is masked in raw and base64', 'redact'],
+  ['embedded-base64', 'src/redact.ts', '[...variants, ...embeddedBase64(value)]', 'variants', 'inside a longer base64 payload', 'redact'],
+  ['embedded-min-length', 'src/redact.ts', '.filter(stretch => stretch.length >= MIN_EMBEDDED_BASE64_LENGTH)', '', 'too short for a safe stretch', 'redact'],
   ['stdout-mask', 'src/vault-run.ts', "redactText(result.stdout.toString('utf8'), state.values)", "result.stdout.toString('utf8')", 'placeholder form injects', 'vault-run'],
   ['stderr-mask', 'src/vault-run.ts', "redactText(result.stderr.toString('utf8'), state.values)", "result.stderr.toString('utf8')", 'failing command reports', 'vault-run'],
   ['placeholder-grant', 'src/vault-run.ts', 'names.add(name);', '', 'placeholder becomes a shell reference', 'vault-run'],
