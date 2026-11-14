@@ -36,6 +36,17 @@ test('the placeholder form injects the value and the output masks it, raw and ba
   assert.equal(report.stdout.trim(), 'raw=[REDACTED:STRIPE_KEY] b64=[REDACTED:STRIPE_KEY]');
 });
 
+test('a value encoded together with other text, as in a Basic authorization header, comes back masked', async () => {
+  // curl -v prints "Authorization: Basic base64(user:value)": one decode away from the value.
+  const state = await stateWith();
+  const report = await runVault({ command: `printf 'user:%s' "{{secret:STRIPE_KEY}}" | base64` }, { cwd, state });
+  assert.equal(report.status, 'ok', JSON.stringify(report));
+  const encoded = Buffer.from(`user:${VALUE}`, 'utf8').toString('base64');
+  assert.equal(report.stdout.includes(encoded), false);
+  // "user:" fills 6 characters and shares the seventh with the first byte of the value.
+  assert.equal(report.stdout.trim(), `${encoded.slice(0, 7)}[REDACTED:STRIPE_KEY]`);
+});
+
 test('a value is injected into one child process only, never into the Pi process or a later command', async () => {
   const state = await stateWith();
   assert.equal(process.env.PI_TEST_STRIPE, undefined === process.env.PI_TEST_STRIPE ? undefined : process.env.PI_TEST_STRIPE);
