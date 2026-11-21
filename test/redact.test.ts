@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findLeaks, mapStrings, MIN_EMBEDDED_BASE64_LENGTH, MIN_SECRET_LENGTH, redactText, valueVariants } from '../src/redact.ts';
 
-// Fixtures are assembled at runtime so no literal token-shaped string sits in the repository.
+// external: Token-shaped literals must not be committed, even in fixtures.
 const liveKey = ['sk', 'live', 'TESTONLY1234'].join('_');
 const restrictedKey = ['rk', 'live', 'TESTONLY5678'].join('_');
 const githubToken = ['gh', 'p_', 'TESTONLY0123456789abcd'].join('');
@@ -22,7 +22,7 @@ test('stored value is masked in raw and base64 form, and the marker names the se
 
 test('a stored value inside a longer base64 payload is masked at every alignment, leaving at most two border characters', () => {
   const marker = '[REDACTED:STRIPE_KEY]';
-  // Authorization: Basic base64(user:value) is the usual case. The bytes before the value decide its alignment.
+  // external: HTTP Basic authorization base64-encodes user and password together.
   for (const prefix of ['', 'u', 'us', 'user:']) {
     for (const suffix of ['', ':', ':and-more']) {
       const where = `prefix ${JSON.stringify(prefix)}, suffix ${JSON.stringify(suffix)}`;
@@ -31,7 +31,7 @@ test('a stored value inside a longer base64 payload is masked at every alignment
       assert.equal(pieces.length, 2, `masked once: ${where}`);
       const [head = '', tail = ''] = pieces;
       assert.ok(encoded.startsWith(head) && encoded.endsWith(tail), `the text around the marker is untouched: ${where}`);
-      // A base64 character holds 6 bits. It reveals part of the value when those bits overlap the value's bytes.
+      // external: Each base64 character carries six bits and can straddle byte boundaries.
       const firstBit = Buffer.byteLength(prefix) * 8;
       const endBit = firstBit + Buffer.byteLength(stored.value) * 8;
       const kept = [...Array.from(head, (_, index) => index), ...Array.from(tail, (_, index) => encoded.length - tail.length + index)];
@@ -47,13 +47,13 @@ test('embedded masking leaves unrelated base64 alone, and a value too short for 
   assert.equal(redactText(unrelated, [stored]), unrelated);
   assert.deepEqual(findLeaks(unrelated, [stored]), []);
 
-  // The shortest value the vault accepts leaves exactly the minimum stretch at each alignment.
+  // external: The shortest accepted secret reaches the minimum embedded stretch at every alignment.
   const shortest = 'FAKE-678';
   assert.equal(Buffer.byteLength(shortest), MIN_SECRET_LENGTH);
   assert.equal(MIN_EMBEDDED_BASE64_LENGTH, 10);
   assert.deepEqual(valueVariants(shortest).map(variant => variant.length), [12, 10, 10, 10, 8]);
 
-  // One byte less would leave 8 or 9 characters, below the minimum: no embedded form.
+  // external: One byte less produces fewer than the required embedded characters.
   const tooShort = 'FAKE-67';
   assert.deepEqual(valueVariants(tooShort), [base64(tooShort), tooShort]);
   const embedded = base64(`u${tooShort}:`);
@@ -96,18 +96,18 @@ test('mapStrings masks nested strings and copies structure without touching othe
 });
 
 test('variants are the raw value, its base64 form and that form at the other alignments, longest first', () => {
-  // 15 bytes, a multiple of 3: encoded alone or after 3, 6... bytes the value gives the same 20 characters.
+  // external: Base64 alignment repeats every three bytes.
   const aligned = 'FAKE-SECRET-XYZ';
   assert.deepEqual(valueVariants(aligned), [
     base64(aligned),
-    // After 1 byte: 2 characters carry that byte and the last one carries whatever follows the value.
+    // external: At one-byte offset, base64 boundary characters also encode adjacent bytes.
     base64(`u${aligned}`).slice(2, 21),
-    // After 2 bytes: 3 characters carry them and the last one carries whatever follows the value.
+    // external: At two-byte offset, base64 boundary characters also encode adjacent bytes.
     base64(`us${aligned}`).slice(3, 22),
     aligned,
   ]);
 
-  // 16 bytes: the padded form only matches the value encoded alone, so the unpadded stretch is a variant of its own.
+  // external: Base64 padding changes the final character when more bytes follow.
   const unaligned = 'FAKE-SECRET-WXYZ';
   assert.deepEqual(valueVariants(unaligned), [
     base64(unaligned),

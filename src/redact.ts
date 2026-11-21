@@ -1,13 +1,3 @@
-/**
- * Detection and masking of secrets in text. Pure functions: no I/O, no logging.
- *
- * A stored value is found in its raw form and in its base64 form, alone or
- * inside a larger base64 payload, because a command that encodes a credential
- * would otherwise carry it past the check.
- * Known token shapes are matched even when the value is not stored, so a live
- * key pasted by the model or printed by a file is still masked.
- */
-
 export interface KnownSecret {
   readonly name: string;
   readonly value: string;
@@ -43,12 +33,7 @@ export function valueVariants(value: string): string[] {
   return [...new Set([...variants, ...embeddedBase64(value)])].sort((a, b) => b.length - a.length);
 }
 
-/**
- * What the value encodes to inside a larger base64 payload, such as `Authorization: Basic base64(user:value)`.
- * Base64 packs 3 bytes into 4 characters, so the bytes before the value put it at one of three alignments. A
- * character that also holds bits of a neighbouring byte changes with that neighbour, so it is left out: 0, 2 or 3
- * at the start, and the last one unless the value ends on a 3-byte boundary.
- */
+// external: Base64 packs three bytes into four characters; shared boundary bits depend on adjacent bytes.
 function embeddedBase64(value: string): string[] {
   const bytes = Buffer.from(value, 'utf8');
   return [0, 1, 2]

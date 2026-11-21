@@ -1,13 +1,4 @@
-/**
- * Operator CLI: the only way a secret value enters the vault. It prompts on
- * an interactive terminal with no echo. Values never come from arguments,
- * pipes or the environment of a tool call, and nothing here prints a value.
- *
- *   npm run vault -- add STRIPE_KEY              (Windows: DPAPI, the default)
- *   npm run vault -- add STRIPE_KEY --source credman --replace
- *   npm run vault -- link STRIPE_KEY --env STRIPE_LIVE_KEY
- *   npm run vault -- list | check | remove STRIPE_KEY
- */
+
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeCredman, deleteCredman, protectDpapi } from './windows.ts';
