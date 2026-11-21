@@ -1,7 +1,4 @@
-/**
- * The vault_run core: decides whether a command may run, injects the granted
- * secrets into that one child process, and masks the output before it is returned.
- */
+
 import { runShell } from './process.ts';
 import { findLeaks, type KnownSecret, mapStrings, redactText } from './redact.ts';
 import type { SecretState } from './state.ts';

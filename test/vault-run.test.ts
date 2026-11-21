@@ -37,13 +37,13 @@ test('the placeholder form injects the value and the output masks it, raw and ba
 });
 
 test('a value encoded together with other text, as in a Basic authorization header, comes back masked', async () => {
-  // curl -v prints "Authorization: Basic base64(user:value)": one decode away from the value.
+  // external: curl verbose output can contain a reversible HTTP Basic authorization header.
   const state = await stateWith();
   const report = await runVault({ command: `printf 'user:%s' "{{secret:STRIPE_KEY}}" | base64` }, { cwd, state });
   assert.equal(report.status, 'ok', JSON.stringify(report));
   const encoded = Buffer.from(`user:${VALUE}`, 'utf8').toString('base64');
   assert.equal(report.stdout.includes(encoded), false);
-  // "user:" fills 6 characters and shares the seventh with the first byte of the value.
+  // external: Base64 packs user and password across a shared character boundary.
   assert.equal(report.stdout.trim(), `${encoded.slice(0, 7)}[REDACTED:STRIPE_KEY]`);
 });
 
@@ -106,8 +106,8 @@ test('a command that exceeds its timeout is killed and reports timeout', async (
 });
 
 test('a command that leaves a background process holding its output returns when the shell exits', async () => {
-  // A detached deploy (`nohup ... &`) whose descendants inherit the output pipe kept vault_run waiting until the
-  // deploy ended, 13 minutes past a 60 s timeout, and the call came back as an uncertain timeout.
+  // external: Detached descendants can inherit and hold open the output pipe.
+
   const state = await stateWith();
   const started = Date.now();
   const report = await runVault({ command: '(sleep 6 &); echo started', timeoutMs: 4000 }, { cwd, state });

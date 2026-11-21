@@ -1,7 +1,4 @@
-/**
- * The vault file: secret names mapped to where their values live. It holds
- * references and protected blobs only. Plaintext values never reach this file.
- */
+
 import { randomBytes } from 'node:crypto';
 import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';

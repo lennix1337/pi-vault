@@ -1,18 +1,11 @@
-/**
- * Runs one shell command with a given environment, capturing its output as
- * bytes so the caller can mask secrets before any of it is kept or shown.
- */
+
 import { spawn, spawnSync } from 'node:child_process';
 import { getShellConfig } from '@earendil-works/pi-coding-agent';
 
 /** Raw output kept per stream. Beyond this the capture stops and the tail is dropped. */
 export const CAPTURE_LIMIT_BYTES = 8 * 1024 * 1024;
 
-/**
- * How long the output may stay open after the shell exits or is killed. A process the command left in the
- * background (`nohup deploy &`) can inherit the pipes and hold them for as long as it runs; past this the
- * call returns with what the shell wrote instead of waiting for it.
- */
+// external: Background processes can inherit output pipes after the shell exits.
 const DRAIN_MS = 500;
 
 export interface ProcessOptions {
@@ -100,7 +93,7 @@ export function runShell(options: ProcessOptions): Promise<ProcessResult> {
   });
 }
 
-/** Keeps the first CAPTURE_LIMIT_BYTES of a stream. The display window is far smaller, so a cut here never reaches the model. */
+
 class Capture {
   private readonly chunks: Buffer[] = [];
   private size = 0;
@@ -130,7 +123,7 @@ function killTree(pid: number | undefined, posix: boolean): void {
     try {
       process.kill(-pid, 'SIGKILL');
     } catch {
-      // The group already exited.
+
     }
   } else {
     spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });

@@ -1,7 +1,4 @@
-/**
- * Resolves the vault's references into values, in memory, for this Pi process.
- * Values are never written anywhere: not to vault.json, logs or tool results.
- */
+
 import { stat } from 'node:fs/promises';
 import { MIN_SECRET_LENGTH, type KnownSecret } from './redact.ts';
 import { loadVault, type SourceKind, type VaultFile, vaultFilePath } from './store.ts';

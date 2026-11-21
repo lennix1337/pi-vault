@@ -12,8 +12,8 @@ export default function extension(pi: ExtensionAPI, options: { readonly runtime?
     void runtime.state().catch(() => undefined);
   });
 
-  // Literal secrets never enter a tool call: refused, not rewritten, so the model learns the rule.
-  // Bash and PowerShell commands also lose the variables that carry vault values before they run.
+
+
   pi.on('tool_call', async event => {
     const state = await runtime.state();
     const leaks = argumentLeaks(event.input, state);
@@ -26,7 +26,7 @@ export default function extension(pi: ExtensionAPI, options: { readonly runtime?
     return undefined;
   });
 
-  // Every tool result is masked before the model sees it, including reads and the output of other extensions.
+
   pi.on('tool_result', async event => {
     const state = await runtime.state();
     const redact = (text: string) => redactText(text, state.values);

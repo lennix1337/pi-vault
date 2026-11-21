@@ -1,11 +1,4 @@
-/**
- * Windows backends: DPAPI-protected values and Windows Credential Manager
- * generic credentials, both reached through one Windows PowerShell process.
- *
- * All traffic with the script is ASCII: values travel base64-encoded in both
- * directions, so no console code page can corrupt a secret, and no plaintext
- * ever appears on a command line. Stdout carries plaintext only to this module.
- */
+// external: Windows console code pages can corrupt non-ASCII secret data; transport uses base64.
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -135,7 +128,7 @@ function runScript(operation: Operation, stdin: string, target?: string): Promis
     child.stdout.on('data', (chunk: string) => { stdout += chunk; });
     child.on('error', () => { clearTimeout(timer); reject(new Error('Windows PowerShell could not be started')); });
     child.on('close', exitCode => { clearTimeout(timer); resolve({ exitCode, stdout }); });
-    // A script that exits early closes its stdin; that write error is reported by the exit code, not as a crash.
+    // external: A process can close stdin before the write completes; its exit code reports failure.
     child.stdin.on('error', () => undefined);
     child.stdin.end(stdin, 'ascii');
   });
@@ -149,7 +142,7 @@ export async function readWindowsSecrets(requests: readonly WindowsReadRequest[]
     for (const request of requests) results.set(request.name, { ok: false, code: 'unsupported' });
     return results;
   }
-  // DPAPI blobs travel as base64 so each line is plain ASCII with tab separators.
+  // external: DPAPI blob transport uses ASCII base64 and tab separators.
   const input = requests.map(request => `${request.name}\t${request.source}\t${request.source === 'dpapi' ? Buffer.from(request.locator, 'hex').toString('base64') : request.locator}`).join('\n');
   const run = await runScript('read', input);
   if (run.exitCode !== 0) throw new Error(`Windows PowerShell read failed (exit ${run.exitCode})`);
