@@ -52,6 +52,22 @@ export function describeLeaks(labels: readonly string[]): string {
   return `argument contains a stored secret or a token shape (${labels.join(', ')}); write {{secret:NAME}} instead of a value`;
 }
 
+/** Some model hosts send the array argument as its JSON text ('["A"]') or a bare name; read both as the list they mean. */
+export function secretNames(secrets: unknown): string[] {
+  if (Array.isArray(secrets)) return secrets.map(String);
+  if (typeof secrets !== 'string' || secrets.trim() === '') return [];
+  try {
+    const parsed: unknown = JSON.parse(secrets);
+    if (Array.isArray(parsed)) return parsed.map(String);
+    if (typeof parsed === 'string') return [parsed];
+  } catch { return bareNames(secrets); }
+  return bareNames(secrets);
+}
+
+function bareNames(text: string): string[] {
+  return text.split(',').map(name => name.trim()).filter(Boolean);
+}
+
 export async function runVault(request: VaultRunRequest, options: { readonly cwd: string; readonly state: SecretState; readonly signal?: AbortSignal; readonly baseEnv?: NodeJS.ProcessEnv }): Promise<VaultRunReport> {
   const { state } = options;
   if (state.fileError) return refused(`vault unavailable: ${state.fileError}`);
@@ -60,7 +76,7 @@ export async function runVault(request: VaultRunRequest, options: { readonly cwd
   if (leaks.length > 0) return refused(describeLeaks(leaks));
 
   const expanded = expandPlaceholders(request.command);
-  const granted = [...new Set([...(request.secrets ?? []), ...expanded.names])];
+  const granted = [...new Set([...secretNames(request.secrets), ...expanded.names])];
   const injected: KnownSecret[] = [];
   for (const name of granted) {
     if (!state.entries.some(entry => entry.name === name)) return refused(`unknown secret ${name}`);
