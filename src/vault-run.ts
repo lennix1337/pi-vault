@@ -60,8 +60,12 @@ export function secretNames(secrets: unknown): string[] {
     const parsed: unknown = JSON.parse(secrets);
     if (Array.isArray(parsed)) return parsed.map(String);
     if (typeof parsed === 'string') return [parsed];
-  } catch { /* a bare name */ }
-  return secrets.split(',').map(name => name.trim()).filter(Boolean);
+  } catch { return bareNames(secrets); }
+  return bareNames(secrets);
+}
+
+function bareNames(text: string): string[] {
+  return text.split(',').map(name => name.trim()).filter(Boolean);
 }
 
 export async function runVault(request: VaultRunRequest, options: { readonly cwd: string; readonly state: SecretState; readonly signal?: AbortSignal; readonly baseEnv?: NodeJS.ProcessEnv }): Promise<VaultRunReport> {
