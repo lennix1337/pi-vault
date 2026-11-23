@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { expandPlaceholders, runVault, scrubPrefix, argumentLeaks, childEnvironment } from '../src/vault-run.ts';
+import { expandPlaceholders, runVault, secretNames, scrubPrefix, argumentLeaks, childEnvironment } from '../src/vault-run.ts';
 import { resolveState } from '../src/state.ts';
 import { EMPTY_VAULT, withSecret } from '../src/store.ts';
 import { tmpdir } from 'node:os';
@@ -173,4 +173,13 @@ test('the scrub prefix removes env carriers for bash and PowerShell, and is empt
 test('a vault that cannot be read refuses to run anything', async () => {
   const report = await runVault({ command: 'echo ok' }, { cwd, state: { entries: [], values: [], unavailable: new Map(), fileError: 'vault.json is not valid JSON' } });
   assert.equal(report.status, 'refused');
+});
+
+test('secrets sent as JSON text or a bare name inject like the array they mean', async () => {
+  assert.deepEqual(secretNames('["STRIPE_KEY"]'), ['STRIPE_KEY']);
+  assert.deepEqual(secretNames('"STRIPE_KEY"'), ['STRIPE_KEY']);
+  assert.deepEqual(secretNames('STRIPE_KEY, OTHER_KEY'), ['STRIPE_KEY', 'OTHER_KEY']);
+  const state = await stateWith();
+  const report = await runVault({ command: 'echo "len=${#STRIPE_KEY}"', secrets: '["STRIPE_KEY"]' as unknown as string[] }, { cwd, state });
+  assert.equal(report.status, 'ok', JSON.stringify(report));
 });
